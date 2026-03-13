@@ -1,0 +1,42 @@
+[
+  {
+    "id": "caveman",
+    "label": "Caveman",
+    "prompt": "RAW photo, DSLR, a prehistoric caveman wearing rough animal fur clothing, matted hair and beard, cave entrance with ancient cave paintings behind them, dramatic torchlight, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  },
+  {
+    "id": "ancient-egypt",
+    "label": "Ancient Egypt",
+    "prompt": "RAW photo, DSLR, an ancient Egyptian pharaoh wearing a golden nemes headdress and royal lapis lazuli collar, kohl-lined eyes, grand hieroglyph-covered temple columns behind them, warm golden desert light, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  },
+  {
+    "id": "ancient-rome",
+    "label": "Ancient Rome",
+    "prompt": "RAW photo, DSLR, a noble ancient Roman senator wearing a white toga with a purple border, marble columns and the Roman Forum in the background, soft warm daylight, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  },
+  {
+    "id": "medieval-knight",
+    "label": "Medieval Knight",
+    "prompt": "RAW photo, DSLR, a medieval knight wearing polished plate armor with visor raised, castle and drawbridge in the background, overcast natural lighting, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  },
+  {
+    "id": "renaissance",
+    "label": "Renaissance",
+    "prompt": "RAW photo, DSLR, a person in Italian Renaissance fashion wearing rich velvet and silk clothing, soft chiaroscuro candlelight, dark background, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  },
+  {
+    "id": "victorian-era",
+    "label": "Victorian Era",
+    "prompt": "RAW photo, a person in Victorian era fashion wearing a top hat and formal tailcoat, formal portrait pose, antique sepia toning, natural skin texture, visible pores, realistic eyes, hyperrealistic, sharp focus"
+  },
+  {
+    "id": "1970s-disco",
+    "label": "1970s Disco",
+    "prompt": "RAW photo, DSLR, a person in 1970s disco fashion wearing a wide-collared satin shirt, vibrant neon club lights in the background, analog film grain, natural skin texture, visible pores, realistic eyes, hyperrealistic, sharp focus"
+  },
+  {
+    "id": "modern-day",
+    "label": "Modern Day",
+    "prompt": "RAW photo, DSLR, professional headshot of a person wearing a stylish modern outfit, soft neutral studio lighting, gradient background, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
+  }
+]
