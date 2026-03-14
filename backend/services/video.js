@@ -52,20 +52,24 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
   // Each transition offset = i * HOLD_DURATION (not segmentDuration — they overlap)
   let filterParts = [];
 
-  // Scale all inputs to 1080x1080 with proper pixel format
+  // Scale all inputs to 720x720 with proper pixel format
+  // Use scale=720:720 (no aspect ratio flag) since fal.ai outputs square images
   for (let i = 0; i < n; i++) {
-    filterParts.push(`[${i}:v]scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p[v${i}]`);
+    filterParts.push(`[${i}:v]scale=720:720,setsar=1,format=yuv420p[v${i}]`);
   }
 
   // Chain xfade transitions
-  // xfade offset = i * HOLD_DURATION (when the next fade starts)
+  // Add explicit format=yuv420p after each xfade to prevent FFmpeg from inserting
+  // its own auto_scale filters which can fail on complex chains
   let lastLabel = 'v0';
   for (let i = 1; i < n; i++) {
     const offset = i * HOLD_DURATION;
+    const rawLabel = `xfraw${i}`;
     const outLabel = i === n - 1 ? 'xfaded' : `xf${i}`;
     filterParts.push(
-      `[${lastLabel}][v${i}]xfade=transition=fade:duration=${FADE_DURATION}:offset=${offset}[${outLabel}]`
+      `[${lastLabel}][v${i}]xfade=transition=fade:duration=${FADE_DURATION}:offset=${offset}[${rawLabel}]`
     );
+    filterParts.push(`[${rawLabel}]format=yuv420p[${outLabel}]`);
     lastLabel = outLabel;
   }
 
