@@ -24,6 +24,14 @@ function resolveFfmpeg() {
 
 const FFMPEG_BIN = resolveFfmpeg();
 
+// Use explicit font paths on Linux (Docker); macOS has system fonts ffmpeg finds automatically
+const FONT_BOLD = require('fs').existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+  ? 'fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:'
+  : '';
+const FONT_REGULAR = require('fs').existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+  ? 'fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:'
+  : '';
+
 /**
  * Builds the FFmpeg filter_complex string for xfade transitions + text overlays.
  * @param {string[]} imagePaths - ordered list of input image file paths
@@ -70,14 +78,14 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
     const label = eraLabels[i].toUpperCase().replace(/'/g, "\\'").replace(/:/g, '\\:');
     const outLabel = i === n - 1 ? 'labeled' : `lbl${i}`;
     filterParts.push(
-      `[${textChain}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${label}':fontsize=44:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=40:enable='between(t,${startTime},${endTime})'[${outLabel}]`
+      `[${textChain}]drawtext=${FONT_BOLD}text='${label}':fontsize=44:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=40:enable='between(t,${startTime},${endTime})'[${outLabel}]`
     );
     textChain = outLabel;
   }
 
   // Add watermark
   filterParts.push(
-    `[${textChain}]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='erafy.com':fontsize=20:fontcolor=white@0.6:borderw=1:bordercolor=black@0.4:x=w-text_w-14:y=h-text_h-14[out]`
+    `[${textChain}]drawtext=${FONT_REGULAR}text='erafy.com':fontsize=20:fontcolor=white@0.6:borderw=1:bordercolor=black@0.4:x=w-text_w-14:y=h-text_h-14[out]`
   );
 
   const filterComplex = filterParts.join(';');
