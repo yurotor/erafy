@@ -5,13 +5,6 @@ const fs = require('fs');
 
 fal.config({ credentials: process.env.FAL_KEY });
 
-const NEGATIVE_PROMPT =
-  'shiny skin, oily skin, glossy skin, plastic skin, waxy skin, doll skin, ' +
-  'forehead wrinkles, brow furrows, forehead lines, deep creases, ' +
-  'cartoonish, anime, cgi, illustration, painting artifacts, airbrushed, over-smoothed, ' +
-  'blurry face, soft focus, distorted face, asymmetric eyes, generic nose, button nose, ' +
-  'deformed features, mutated, ugly, unrealistic, fake eyes, glass eyes, lifeless eyes';
-
 async function uploadSelfie(selfieBase64) {
   const [header, b64data] = selfieBase64.split(',');
   const mimeType = header.match(/data:([^;]+)/)[1];
@@ -20,17 +13,17 @@ async function uploadSelfie(selfieBase64) {
 }
 
 async function generateEra(selfieUrl, era) {
-  const result = await fal.subscribe('fal-ai/pulid', {
+  const result = await fal.subscribe('fal-ai/flux/dev/image-to-image', {
     input: {
-      reference_images: [{ image_url: selfieUrl }],
+      image_url: selfieUrl,
       prompt: era.prompt,
-      negative_prompt: NEGATIVE_PROMPT,
-      num_inference_steps: 4,
-      guidance_scale: 1.2,
+      strength: 0.65,
+      num_inference_steps: 15,
+      guidance_scale: 3.5,
       num_images: 1,
       image_size: { width: 512, height: 512 },
     },
-    pollInterval: 1000,
+    pollInterval: 500,
     logs: false,
   });
 

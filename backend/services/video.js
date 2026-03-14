@@ -1,10 +1,9 @@
 const { spawn, execSync } = require('child_process');
-const path = require('path');
+const fs = require('fs');
 
-const HOLD_DURATION = 4;    // seconds each era is shown
-const FADE_DURATION = 0.5;  // seconds for cross-fade transition
+const HOLD_DURATION = 4;   // seconds each era is shown
+const FADE_DURATION = 0.5; // seconds for fade in/out per segment
 
-// Prefer ffmpeg-full (has drawtext/libfreetype) over the stripped default build
 function resolveFfmpeg() {
   const candidates = [
     '/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg',
@@ -13,90 +12,77 @@ function resolveFfmpeg() {
   ];
   for (const bin of candidates) {
     try {
-      execSync(`${bin} -filters 2>/dev/null | grep -q drawtext`, { stdio: 'ignore' });
+      execSync(`${bin} -version`, { stdio: 'ignore' });
       return bin;
     } catch {
-      // not found or doesn't have drawtext
+      // not found
     }
   }
-  return 'ffmpeg'; // fallback; will fail if drawtext missing
+  return 'ffmpeg';
 }
 
 const FFMPEG_BIN = resolveFfmpeg();
 
-// Use explicit font paths on Linux (Docker); macOS has system fonts ffmpeg finds automatically
-const FONT_BOLD = require('fs').existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+// Check for drawtext support (optional — video works without it)
+let HAS_DRAWTEXT = false;
+try {
+  execSync(`${FFMPEG_BIN} -filters 2>&1 | grep drawtext`, { stdio: 'pipe' });
+  HAS_DRAWTEXT = true;
+} catch {
+  // drawtext not available
+}
+
+const FONT_BOLD = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
   ? 'fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:'
   : '';
-const FONT_REGULAR = require('fs').existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+const FONT_REGULAR = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
   ? 'fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:'
   : '';
 
-/**
- * Builds the FFmpeg filter_complex string for xfade transitions + text overlays.
- * @param {string[]} imagePaths - ordered list of input image file paths
- * @param {string[]} eraLabels  - matching era display labels
- * @returns {{ args: string[], filterComplex: string }}
- */
 function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
   const n = imagePaths.length;
-  const segmentDuration = HOLD_DURATION + FADE_DURATION; // 4.5 sec per segment
 
-  // -loop 1 -t <duration> -i <image> for each input
+  // Each image is looped for HOLD_DURATION seconds
   const inputArgs = [];
   imagePaths.forEach((p) => {
-    inputArgs.push('-loop', '1', '-t', String(segmentDuration), '-i', p);
+    inputArgs.push('-loop', '1', '-t', String(HOLD_DURATION), '-i', p);
   });
 
-  // Build xfade chain
-  // Each transition offset = i * HOLD_DURATION (not segmentDuration — they overlap)
-  let filterParts = [];
+  const filterParts = [];
 
-  // Scale all inputs to 720x720 with proper pixel format
-  // Use scale=720:720 (no aspect ratio flag) since fal.ai outputs square images
+  // Scale each input + add fade in/out + format
   for (let i = 0; i < n; i++) {
-    filterParts.push(`[${i}:v]scale=720:720,setsar=1,format=yuv420p[v${i}]`);
+    const fadeOut = HOLD_DURATION - FADE_DURATION;
+    let chain = `[${i}:v]scale=512:512,setsar=1,format=yuv420p`;
+    chain += `,fade=t=in:st=0:d=${FADE_DURATION}`;
+    chain += `,fade=t=out:st=${fadeOut}:d=${FADE_DURATION}`;
+
+    // Add era label if drawtext is available
+    if (HAS_DRAWTEXT) {
+      const label = eraLabels[i].toUpperCase().replace(/'/g, "\u2019").replace(/:/g, '\\:');
+      chain += `,drawtext=${FONT_BOLD}text='${label}':fontsize=44:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=40`;
+    }
+
+    chain += `[s${i}]`;
+    filterParts.push(chain);
   }
 
-  // Chain xfade transitions
-  // Add explicit format=yuv420p after each xfade to prevent FFmpeg from inserting
-  // its own auto_scale filters which can fail on complex chains
-  let lastLabel = 'v0';
-  for (let i = 1; i < n; i++) {
-    const offset = i * HOLD_DURATION;
-    const rawLabel = `xfraw${i}`;
-    const outLabel = i === n - 1 ? 'xfaded' : `xf${i}`;
-    filterParts.push(
-      `[${lastLabel}][v${i}]xfade=transition=fade:duration=${FADE_DURATION}:offset=${offset}[${rawLabel}]`
-    );
-    filterParts.push(`[${rawLabel}]format=yuv420p[${outLabel}]`);
-    lastLabel = outLabel;
+  // Concat all segments
+  const concatInputs = Array.from({ length: n }, (_, i) => `[s${i}]`).join('');
+  let concatChain = `${concatInputs}concat=n=${n}:v=1:a=0`;
+
+  // Add watermark if drawtext available
+  if (HAS_DRAWTEXT) {
+    concatChain += `[merged];[merged]drawtext=${FONT_REGULAR}text='erafy.com':fontsize=20:fontcolor=white@0.6:borderw=1:bordercolor=black@0.4:x=w-text_w-14:y=h-text_h-14[out]`;
+  } else {
+    concatChain += '[out]';
   }
 
-  // Add era label drawtext filters (chain on the xfaded output)
-  // Each era occupies [i*HOLD_DURATION, (i+1)*HOLD_DURATION] seconds of the output
-  let textChain = 'xfaded';
-  for (let i = 0; i < n; i++) {
-    const startTime = i * HOLD_DURATION;
-    const endTime = startTime + HOLD_DURATION;
-    const label = eraLabels[i].toUpperCase().replace(/'/g, "\\'").replace(/:/g, '\\:');
-    const outLabel = i === n - 1 ? 'labeled' : `lbl${i}`;
-    filterParts.push(
-      `[${textChain}]drawtext=${FONT_BOLD}text='${label}':fontsize=44:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=40:enable='between(t,${startTime},${endTime})'[${outLabel}]`
-    );
-    textChain = outLabel;
-  }
+  filterParts.push(concatChain);
 
-  // Add watermark
-  filterParts.push(
-    `[${textChain}]drawtext=${FONT_REGULAR}text='erafy.com':fontsize=20:fontcolor=white@0.6:borderw=1:bordercolor=black@0.4:x=w-text_w-14:y=h-text_h-14[out]`
-  );
-
-  const filterComplex = filterParts.join(';');
-
-  const args = [
+  return [
     ...inputArgs,
-    '-filter_complex', filterComplex,
+    '-filter_complex', filterParts.join(';'),
     '-map', '[out]',
     '-c:v', 'libx264',
     '-preset', 'ultrafast',
@@ -106,42 +92,27 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
     '-y',
     outputPath,
   ];
-
-  return args;
 }
 
-/**
- * Assembles era images into a cross-fade MP4.
- * @param {string[]} imagePaths - ordered paths to 1080x1080 era images
- * @param {string[]} eraLabels  - display labels
- * @param {string}   outputPath - destination .mp4 path
- * @returns {Promise<string>} resolves with outputPath
- */
 function assembleVideo(imagePaths, eraLabels, outputPath) {
   return new Promise((resolve, reject) => {
     const args = buildFFmpegArgs(imagePaths, eraLabels, outputPath);
-
-    console.log('FFmpeg binary:', FFMPEG_BIN);
-    console.log('FFmpeg args:', args.join(' '));
-
     const proc = spawn(FFMPEG_BIN, args);
 
     let stderr = '';
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
     proc.on('close', (code) => {
       if (code === 0) {
         resolve(outputPath);
       } else {
-        console.error('FFmpeg stderr:', stderr);
+        console.error('FFmpeg stderr:', stderr.slice(-2000));
         reject(new Error(`FFmpeg exited with code ${code}`));
       }
     });
 
     proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn ffmpeg: ${err.message}. Make sure ffmpeg is installed.`));
+      reject(new Error(`Failed to spawn ffmpeg: ${err.message}`));
     });
   });
 }

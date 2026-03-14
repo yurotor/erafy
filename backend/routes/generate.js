@@ -43,7 +43,6 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
   const selfiePath = req.file.path;
   const jobId = path.basename(selfiePath);
   const outputDir = path.join(__dirname, '../output', jobId);
-  console.log(`[${jobId}] Job started`);
   fs.mkdirSync(outputDir, { recursive: true });
 
   try {
@@ -53,9 +52,7 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
 
     // Upload selfie once if supported (fal.ai), otherwise pass base64 per-era (replicate)
     sendEvent('status', { message: 'Uploading selfie...' });
-    console.log(`[${jobId}] Uploading selfie to fal.ai storage...`);
     const selfieInput = uploadSelfie ? await uploadSelfie(selfieBase64) : selfieBase64;
-    console.log(`[${jobId}] Selfie uploaded: ${typeof selfieInput === 'string' ? selfieInput.substring(0, 60) : 'base64'}`);
 
     sendEvent('status', { message: 'Starting generation for all eras...' });
 
@@ -66,9 +63,7 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
       (async () => {
         sendEvent('era_started', { index: i, id: era.id, label: era.label });
 
-        console.log(`[${jobId}] Era ${i} (${era.id}): calling fal.ai...`);
         const imageUrl = await generateEra(selfieInput, era);
-        console.log(`[${jobId}] Era ${i} (${era.id}): got URL ${String(imageUrl).substring(0, 60)}`);
 
         const ext = 'jpg';
         const localPath = path.join(outputDir, `${era.id}.${ext}`);
@@ -99,7 +94,7 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
     sendEvent('done', { images: results, videoUrl });
 
   } catch (err) {
-    console.error(`[${jobId}] Generation error:`, err.message, err.stack);
+    console.error('Generation error:', err.message);
     sendEvent('error', { message: err.message });
   } finally {
     // Clean up uploaded selfie
