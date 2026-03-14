@@ -13,13 +13,11 @@ async function uploadSelfie(selfieBase64) {
 }
 
 async function generateEra(selfieUrl, era) {
-  const result = await fal.subscribe('fal-ai/flux/dev/image-to-image', {
+  const result = await fal.subscribe('fal-ai/flux-pulid', {
     input: {
-      image_url: selfieUrl,
+      reference_image_url: selfieUrl,
       prompt: era.prompt,
-      strength: 0.65,
-      num_inference_steps: 15,
-      guidance_scale: 3.5,
+      num_inference_steps: 4,
       num_images: 1,
       image_size: { width: 512, height: 512 },
     },
