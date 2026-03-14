@@ -3,7 +3,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { generateEra, downloadImage } = require('../services/replicate');
+const useReplicate = process.env.AI_PROVIDER === 'replicate';
+const { generateEra, downloadImage } = useReplicate
+  ? require('../services/replicate')
+  : require('../services/fal');
 const { assembleVideo } = require('../services/video');
 const eras = require('../prompts/through-the-ages.json');
 
@@ -53,12 +56,8 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
     const results = new Array(eras.length);
     const imagePaths = new Array(eras.length);
 
-    // Replicate throttles to burst=1 on low-credit accounts.
-    // Create predictions sequentially (12s apart) so we don't get 429s,
-    // then let them run and resolve in parallel via Promise.all.
-    const STAGGER_MS = 12000;
     const predictionPromises = eras.map((era, i) =>
-      new Promise((resolve) => setTimeout(resolve, i * STAGGER_MS)).then(async () => {
+      (async () => {
         sendEvent('era_started', { index: i, id: era.id, label: era.label });
 
         const imageUrl = await generateEra(selfieBase64, era);
@@ -76,7 +75,7 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
         };
 
         sendEvent('era_complete', results[i]);
-      })
+      })()
     );
 
     await Promise.all(predictionPromises);
