@@ -39,7 +39,7 @@ const FONT_REGULAR = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.
   ? 'fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:'
   : '';
 
-function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
+function buildFFmpegArgs(imagePaths, eraLabels, outputPath, audioPath = null) {
   const n = imagePaths.length;
 
   // Each image is looped for HOLD_DURATION seconds
@@ -47,6 +47,11 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
   imagePaths.forEach((p) => {
     inputArgs.push('-loop', '1', '-t', String(HOLD_DURATION), '-i', p);
   });
+
+  // Audio is the last input (index n)
+  if (audioPath) {
+    inputArgs.push('-i', audioPath);
+  }
 
   const filterParts = [];
 
@@ -80,23 +85,43 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
 
   filterParts.push(concatChain);
 
-  return [
+  // --- Audio ---
+  // Trim soundtrack to video length, fade out last 2 seconds.
+  if (audioPath) {
+    const totalDuration = n * HOLD_DURATION;
+    const fadeStart = totalDuration - 2;
+    filterParts.push(
+      `[${n}:a]atrim=0:${totalDuration},asetpts=PTS-STARTPTS,afade=t=out:st=${fadeStart}:d=2[audio_out]`
+    );
+  }
+
+  const args = [
     ...inputArgs,
     '-filter_complex', filterParts.join(';'),
     '-map', '[out]',
+  ];
+
+  if (audioPath) {
+    args.push('-map', '[audio_out]', '-c:a', 'aac', '-b:a', '128k');
+  }
+
+  args.push(
     '-c:v', 'libx264',
     '-preset', 'ultrafast',
     '-crf', '26',
     '-pix_fmt', 'yuv420p',
     '-r', '30',
+    '-shortest',
     '-y',
     outputPath,
-  ];
+  );
+
+  return args;
 }
 
-function assembleVideo(imagePaths, eraLabels, outputPath) {
+function assembleVideo(imagePaths, eraLabels, outputPath, audioPath = null) {
   return new Promise((resolve, reject) => {
-    const args = buildFFmpegArgs(imagePaths, eraLabels, outputPath);
+    const args = buildFFmpegArgs(imagePaths, eraLabels, outputPath, audioPath);
     const proc = spawn(FFMPEG_BIN, args);
 
     let stderr = '';

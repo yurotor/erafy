@@ -18,6 +18,7 @@ export default function App() {
 
     const formData = new FormData();
     formData.append('selfie', file);
+    formData.append('variant', 'b');
 
     fetch('/api/generate', { method: 'POST', body: formData })
       .then((res) => {

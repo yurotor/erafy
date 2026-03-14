@@ -8,6 +8,8 @@ const aiService = useReplicate ? require('../services/replicate') : require('../
 const { generateEra, downloadImage } = aiService;
 const uploadSelfie = aiService.uploadSelfie || null;
 const { assembleVideo } = require('../services/video');
+
+const SOUNDTRACK_PATH = require('path').join(__dirname, '../assets/audio/soundtrack.mp3');
 const eras = require('../prompts/through-the-ages.json');
 
 const router = express.Router();
@@ -85,10 +87,17 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
 
     sendEvent('status', { message: 'All eras complete. Assembling video...' });
 
+    const eraLabels = eras.map((e) => e.label);
+
+    // Use soundtrack if available, otherwise silent
+    const audioPath = fs.existsSync(SOUNDTRACK_PATH) ? SOUNDTRACK_PATH : null;
+    if (!audioPath) {
+      console.warn('No soundtrack found at assets/audio/soundtrack.mp3 — generating silent video.');
+    }
+
     // Assemble video
     const videoPath = path.join(outputDir, 'erafy.mp4');
-    const eraLabels = eras.map((e) => e.label);
-    await assembleVideo(imagePaths, eraLabels, videoPath);
+    await assembleVideo(imagePaths, eraLabels, videoPath, audioPath);
 
     const videoUrl = `/output/${jobId}/erafy.mp4`;
     sendEvent('done', { images: results, videoUrl });
