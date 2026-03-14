@@ -28,7 +28,7 @@ async function generateEra(selfieUrl, era) {
       num_inference_steps: 4,
       guidance_scale: 1.2,
       num_images: 1,
-      image_size: { width: 720, height: 720 },
+      image_size: 'square',
     },
     pollInterval: 1000,
     logs: false,
