@@ -46,7 +46,7 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
 
   // Scale all inputs to 1080x1080 with proper pixel format
   for (let i = 0; i < n; i++) {
-    filterParts.push(`[${i}:v]scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p[v${i}]`);
+    filterParts.push(`[${i}:v]scale=720:720:force_original_aspect_ratio=decrease,pad=720:720:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p[v${i}]`);
   }
 
   // Chain xfade transitions
@@ -70,14 +70,14 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
     const label = eraLabels[i].toUpperCase().replace(/'/g, "\\'").replace(/:/g, '\\:');
     const outLabel = i === n - 1 ? 'labeled' : `lbl${i}`;
     filterParts.push(
-      `[${textChain}]drawtext=text='${label}':fontsize=64:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=60:enable='between(t,${startTime},${endTime})'[${outLabel}]`
+      `[${textChain}]drawtext=text='${label}':fontsize=44:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=40:enable='between(t,${startTime},${endTime})'[${outLabel}]`
     );
     textChain = outLabel;
   }
 
   // Add watermark
   filterParts.push(
-    `[${textChain}]drawtext=text='erafy.com':fontsize=28:fontcolor=white@0.6:borderw=2:bordercolor=black@0.4:x=w-text_w-20:y=h-text_h-20[out]`
+    `[${textChain}]drawtext=text='erafy.com':fontsize=20:fontcolor=white@0.6:borderw=1:bordercolor=black@0.4:x=w-text_w-14:y=h-text_h-14[out]`
   );
 
   const filterComplex = filterParts.join(';');
@@ -87,8 +87,8 @@ function buildFFmpegArgs(imagePaths, eraLabels, outputPath) {
     '-filter_complex', filterComplex,
     '-map', '[out]',
     '-c:v', 'libx264',
-    '-preset', 'fast',
-    '-crf', '23',
+    '-preset', 'ultrafast',
+    '-crf', '26',
     '-pix_fmt', 'yuv420p',
     '-r', '30',
     '-y',
