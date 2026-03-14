@@ -30,6 +30,8 @@ async function generateEra(selfieUrl, era) {
       num_images: 1,
       image_size: { width: 720, height: 720 },
     },
+    pollInterval: 1000,
+    logs: false,
   });
 
   return result.data.images[0].url;

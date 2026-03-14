@@ -1,10 +1,5 @@
 [
   {
-    "id": "caveman",
-    "label": "Caveman",
-    "prompt": "RAW photo, DSLR, a prehistoric caveman wearing rough animal fur clothing, matted hair and beard, cave entrance with ancient cave paintings behind them, dramatic torchlight, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
-  },
-  {
     "id": "ancient-egypt",
     "label": "Ancient Egypt",
     "prompt": "RAW photo, DSLR, an ancient Egyptian pharaoh wearing a golden nemes headdress and royal lapis lazuli collar, kohl-lined eyes, grand hieroglyph-covered temple columns behind them, warm golden desert light, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
@@ -33,10 +28,5 @@
     "id": "1970s-disco",
     "label": "1970s Disco",
     "prompt": "RAW photo, DSLR, a person in 1970s disco fashion wearing a wide-collared satin shirt, vibrant neon club lights in the background, analog film grain, natural skin texture, visible pores, realistic eyes, hyperrealistic, sharp focus"
-  },
-  {
-    "id": "modern-day",
-    "label": "Modern Day",
-    "prompt": "RAW photo, DSLR, professional headshot of a person wearing a stylish modern outfit, soft neutral studio lighting, gradient background, natural skin texture, visible pores, realistic eyes, hyperrealistic, 8k uhd, sharp focus"
   }
 ]
