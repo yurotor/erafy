@@ -12,16 +12,14 @@ const NEGATIVE_PROMPT =
   'blurry face, soft focus, distorted face, asymmetric eyes, generic nose, button nose, ' +
   'deformed features, mutated, ugly, unrealistic, fake eyes, glass eyes, lifeless eyes';
 
-async function generateEra(selfieBase64, era) {
-  // Upload selfie buffer to fal storage
+async function uploadSelfie(selfieBase64) {
   const [header, b64data] = selfieBase64.split(',');
   const mimeType = header.match(/data:([^;]+)/)[1];
   const buffer = Buffer.from(b64data, 'base64');
+  return fal.storage.upload(new Blob([buffer], { type: mimeType }), { filename: 'selfie.jpg' });
+}
 
-  const selfieUrl = await fal.storage.upload(new Blob([buffer], { type: mimeType }), {
-    filename: 'selfie.jpg',
-  });
-
+async function generateEra(selfieUrl, era) {
   const result = await fal.subscribe('fal-ai/pulid', {
     input: {
       reference_images: [{ image_url: selfieUrl }],
@@ -30,6 +28,7 @@ async function generateEra(selfieBase64, era) {
       num_inference_steps: 4,
       guidance_scale: 1.2,
       num_images: 1,
+      image_size: { width: 720, height: 720 },
     },
   });
 
@@ -52,4 +51,4 @@ function downloadImage(url, destPath) {
   });
 }
 
-module.exports = { generateEra, downloadImage };
+module.exports = { uploadSelfie, generateEra, downloadImage };

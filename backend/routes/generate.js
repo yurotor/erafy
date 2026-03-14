@@ -4,9 +4,9 @@ const path = require('path');
 const fs = require('fs');
 
 const useReplicate = process.env.AI_PROVIDER === 'replicate';
-const { generateEra, downloadImage } = useReplicate
-  ? require('../services/replicate')
-  : require('../services/fal');
+const aiService = useReplicate ? require('../services/replicate') : require('../services/fal');
+const { generateEra, downloadImage } = aiService;
+const uploadSelfie = aiService.uploadSelfie || null;
 const { assembleVideo } = require('../services/video');
 const eras = require('../prompts/through-the-ages.json');
 
@@ -46,10 +46,13 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
   fs.mkdirSync(outputDir, { recursive: true });
 
   try {
-    // Convert selfie to base64 data URI for Replicate
     const selfieBuffer = fs.readFileSync(selfiePath);
     const mimeType = req.file.mimetype;
     const selfieBase64 = `data:${mimeType};base64,${selfieBuffer.toString('base64')}`;
+
+    // Upload selfie once if supported (fal.ai), otherwise pass base64 per-era (replicate)
+    sendEvent('status', { message: 'Uploading selfie...' });
+    const selfieInput = uploadSelfie ? await uploadSelfie(selfieBase64) : selfieBase64;
 
     sendEvent('status', { message: 'Starting generation for all eras...' });
 
@@ -60,7 +63,7 @@ router.post('/generate', upload.single('selfie'), async (req, res) => {
       (async () => {
         sendEvent('era_started', { index: i, id: era.id, label: era.label });
 
-        const imageUrl = await generateEra(selfieBase64, era);
+        const imageUrl = await generateEra(selfieInput, era);
 
         const ext = 'jpg';
         const localPath = path.join(outputDir, `${era.id}.${ext}`);
